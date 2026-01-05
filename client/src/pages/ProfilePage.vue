@@ -13,6 +13,7 @@ const user = computed(() => {
 
 const getUser = async () => {
   await authStore.getUser()
+  console.log(user.value)
 }
 
 const logOut = async () => {
@@ -24,11 +25,11 @@ const logOut = async () => {
     .catch((e) => {
       console.log(e)
     })
-  }
+}
 
-  onMounted(async () => {
-    await getUser()
-  })
+onMounted(async () => {
+  await getUser()
+})
 </script>
 <template>
   <v-layout v-if="user">

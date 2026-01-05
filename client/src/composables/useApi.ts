@@ -1,40 +1,47 @@
 import { useAuthStore } from '@/stores/auth'
-import { axiosInstance, axiosPrivateInstance } from '@/utils/axios'
+import { axiosPrivateInstance } from '@/utils/axios'
 import type { AxiosInstance } from 'axios'
-import { watchEffect } from 'vue'
+import { axiosInstance } from '@/utils/axios'
+
+let isInterceptorSet = false
 
 export function useApiPrivate(): AxiosInstance {
   const authStore = useAuthStore()
 
-  watchEffect(() => {
-    axiosInstance.interceptors.request.use(
+  if (!isInterceptorSet) {
+    isInterceptorSet = true
+
+    axiosPrivateInstance.interceptors.request.use(
       (config) => {
-        if (!config.headers['Authorization']) {
-          config.headers['Authorization'] = `Bearer ${authStore.accessToken}`
+        if (!config.headers.Authorization && authStore.accessToken) {
+          config.headers.Authorization = `Bearer ${authStore.accessToken}`
         }
         return config
       },
-      (errors) => {
-        return Promise.reject(errors)
-      }
+      (error) => Promise.reject(error)
     )
-    axiosInstance.interceptors.response.use(
+
+    axiosPrivateInstance.interceptors.response.use(
       (response) => response,
-      async (errors) => {
-        const prevRequest = errors?.config
+      async (error) => {
+        const prevRequest = error?.config
+
         if (
-          (errors?.response?.status === 403 || errors?.response?.status === 401) &&
-          !prevRequest.sent
+          (error?.response?.status === 401 || error?.response?.status === 403) &&
+          !prevRequest._retry
         ) {
-          prevRequest.sent = true
+          prevRequest._retry = true
+
           await authStore.refresh()
-          prevRequest.headers['Authorization'] = authStore.accessToken
-          return axiosInstance(prevRequest)
+
+          prevRequest.headers.Authorization = `Bearer ${authStore.accessToken}`
+          return axiosPrivateInstance(prevRequest)
         }
-        return Promise.reject(errors)
+
+        return Promise.reject(error)
       }
     )
-  })
+  }
 
   return axiosPrivateInstance
 }

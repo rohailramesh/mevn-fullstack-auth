@@ -16,12 +16,18 @@ const menuItems = ref([
   { title: 'Profile', path: '/profile', icon: 'lock_open' }
 ])
 
-const menuItemsFiltered = menuItems.value.filter((item) => {
-  if (isAuthenticated.value) {
-    return item
-  }
-  return item.path !== '/profile'
+const menuItemsFiltered = computed(() => {
+  return menuItems.value.filter((item) => {
+    if (authStore.isAuthenticated) {
+      // hide auth pages when logged in
+      return !['/signin', '/signup'].includes(item.path)
+    }
+
+    // hide profile when logged out
+    return item.path !== '/profile'
+  })
 })
+
 const user = computed(() => {
   return authStore.userDetail
 })

@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', {
   },
   getters: {
     userDetail: (state: IState) => state.user,
-    isAuthenticated: (state: IState) => (state.user?.id ? true : false)
+    isAuthenticated: (state: IState) => !!state.accessToken
   },
   actions: {
     async attempt() {
@@ -52,7 +52,7 @@ export const useAuthStore = defineStore('auth', {
     },
     async logout() {
       try {
-        const { data } = await useApiPrivate().get(`/api/auth/logout`)
+        const { data } = await useApiPrivate().post(`/api/auth/logout`)
         this.accessToken = ''
         this.user = {} as IUser
         return data
@@ -61,12 +61,13 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async refresh() {
+      if (!this.accessToken) return
       try {
-        const { data } = await useApi().post(`/api/auth/refresh`)
+        const { data } = await useApi().post('/api/auth/refresh')
         this.accessToken = data?.access_token
-        return data
-      } catch (err: any | Error) {
-        throw err.response.message
+      } catch {
+        this.accessToken = ''
+        this.user = {} as IUser
       }
     }
   }
